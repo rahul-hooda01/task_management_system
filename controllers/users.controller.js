@@ -229,30 +229,65 @@ const getCurrentUser = asyncHandler(async(req,res,next)=>{
     return res.status(200).json(new ApiResponse(200, req.user, "current user fetch sucesfully"));
 })
 
-const updateRoleDetails = asyncHandler(async(req,res,next)=>{
-    // update role details if user is Admin
-    const {role} = req.body;
-
-    if (!role) {
-        return res.status(400).json( new ApiError(401, "role field required"));
+const updateRoleDetailsById = asyncHandler(async(req,res,next)=>{
+    const id = req.query.id || req.params.id; 
+    const {newRole} = req.body;
+    if (!newRole) {
+        return res.status(400).json( new ApiError(401,  "new role field required"));
     }
-    // Check role enum (if provided)
+    // Check newRole enum (if provided)
     const validRoles = ['Admin', 'Manager', 'User'];
-    if (role && !validRoles.includes(role)) {
-        return res.status(400).json( new ApiError(400, `role must be one of the following: ${validRoles.join(', ')}.`));
+    if (newRole && !validRoles.includes(newRole)) {
+        return res.status(400).json( new ApiError(400, `newRole must be one of the following: ${validRoles.join(', ')}.`));
     }
-    const user = await User.findByIdAndUpdate(req.user?._id, //accept 3 parameter
-        {
-            $set:{
-                role: role || 'User'
-            }
-        },
-        {new :true} 
-    ).select("-password");
+    const user = await User.findById(id) // cause of auth middleware we have access to user details
 
-    res.status(200).json(new ApiResponse(200, user, "account details update succeessfully"));
-})
+    user.role = newRole;  // set this in User and save in model in role but dont send back
+    await user.save({validateBeforeSave:false});
+    return res.status(200).json(new ApiResponse(200, {}, `role change successfully to role: ${newRole}`));
+});
 
+const getUserById = asyncHandler(async(req,res,next)=>{
+    const id = req.query.id || req.params.id; 
+
+    // Validate property ID
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(400).json( new ApiError(400, "Invalid property ID"));
+    }
+
+    try {
+        const user = await User.findById(id).select(
+            "-password -refreshToken"  // except these two field all user data can be sent to frontend
+        );
+        if (!user) {
+            return res.status(400).json( new ApiError(404, "User not found"));
+        }
+        return res.status(200).json(
+            new ApiResponse(200, user, "User fetched successfully")
+        );
+    } catch (error) {
+        return res.status(500).json( new ApiError(501, error.message || "Error fetching user"));
+    }
+});
+
+// Controller to get all users
+const getAllUsers = asyncHandler(async (req, res, next) => {
+    try {
+      // Query the database to get all users, excluding sensitive information like passwords
+      const users = await User.find().select("-password -refreshToken");
+  
+      if (!users || users.length === 0) {
+        return next(new ApiError(404, "No users found"));
+      }
+  
+      // Return the list of users in the response
+      res.status(200).json(
+        new ApiResponse(200, users, "Users fetched successfully"));
+    } catch (error) {
+      // Handle any potential errors and pass them to the error-handling middleware
+      return res.status(500).json( new ApiError(501, error.message || "Server error while fetching users"));
+    }
+});
 
 export {
     registerUser,
@@ -261,5 +296,7 @@ export {
     refreshAcessToken,
     currentPasswordChange,
     getCurrentUser,
-    updateRoleDetails
+    updateRoleDetailsById,
+    getUserById,
+    getAllUsers
 };
