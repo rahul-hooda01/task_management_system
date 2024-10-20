@@ -57,8 +57,8 @@ const registerUser = asyncHandler(async(req,res,next)=>{
         return res.status(400).json( new ApiError(404, "All fields (userName, Email, password) are required"));
     }
 
-    const existedUser = await User.findOne({ //check db m userName or email to nhi h
-        $or: [{ userName }, { email }]  // $or operator use kiya h array m jitni value check krni h krega object k andar alag alag
+    const existedUser = await User.findOne({ 
+        $or: [{ userName }, { email }]
     })
     if (existedUser){
         return res.status(400).json( new ApiError(409, "User with Email & userName already exist"));
@@ -71,7 +71,7 @@ const registerUser = asyncHandler(async(req,res,next)=>{
     
     // //create user
 
-    const user = await User.create({ //user schema se bola k user create kr do
+    const user = await User.create({
         userName,
         email,
         password,
@@ -95,57 +95,54 @@ const loginUser = asyncHandler(async(req,res,next)=>{
     //get data from req.body, validate data( if empty or not, if available userName or email in db)
     // find the user, password check (jwt and hash things), give access token and refresh token in cookies
 
-   try {
-    const {email,password, userName}  = req.body;
- 
-    if(!((userName || email) && password)){
-        return res.status(400).json( new ApiError(400, "Email/userName or password  required"));
+    try {
+        const {email,password, userName}  = req.body;
+    
+        if(!((userName || email) && password)){
+            return res.status(400).json( new ApiError(400, "Email/userName or password  required"));
+        }
+        // find user with help of userName or email
+        const user = await User.findOne({ 
+            $or : [{userName}, {email}]
+        })
+
+        if(!user){
+            return res.status(400).json( new ApiError(400, "user does not exist"));
+        }
+        const isPasswordValid = await user.isPasswordCorrect(password); // check this function if it working or not
+
+        if(!isPasswordValid){
+            return res.status(400).json( new ApiError(401, "Invalid user credentials"));
+        }
+        const {accessToken,refreshToken} = await generateAccessAndRefreshToken(user._id); 
+        const loggedInUser =await User.findById(user._id).select("-password -refreshToken")
+        
+        // send cookies to frontend with user info
+        const options = {
+            httpOnly:true,
+            secure:true
+        }  // that means option set, now cookies will modified from server only
+        
+        return res.status(200)
+        .cookie('accessToken', accessToken, options)
+        .cookie('refreshToken',refreshToken,options)
+        .json(
+            new ApiResponse(200,
+                {
+                    user: loggedInUser, accessToken, refreshToken  // sent in respose if frontend wants to use it
+                },
+                "user logged In sucessfully"
+            )
+        )
+    } catch (error) {
+        return res.status(500).json( new ApiError(501, error.message || "error in login"));
     }
-    // find user with help of userName or email
- const user = await User.findOne({ 
-     $or : [{mobileNumber}, {email}]
- })
-
- if(!user){
-    return res.status(400).json( new ApiError(400, "user does not exist"));
- }
- const isPasswordValid = await user.isPasswordCorrect(password); // check this function if it working or not
-
- if(!isPasswordValid){
-    return res.status(400).json( new ApiError(401, "Invalid user credentials"));
- }
- const {accessToken,refreshToken} = await generateAccessAndRefreshToken(user._id); //isem time lg skta h to await lga do
- // hme kuch unwanted cheeje htani h  jo hm get kr rhe h user se to required fields get kr skte h access tocken wali query se hi, 
- // nhi to uperwale user se lenge to usme refresh tocken nhi hoga kyuki us variable m purana data h usme refresh tocken nhi h
- 
- const loggedInUser =await User.findById(user._id).select("-password -refreshToken")
- 
- // send cookies to frontend with user info
- const options = {
-     httpOnly:true,
-     secure:true
- }  // that means option set h cookies ab server se hi modified hongi khi or se nhi
- 
- return res.status(200)
- .cookie('accessToken', accessToken, options)
- .cookie('refreshToken',refreshToken,options)
- .json(
-     new ApiResponse(200,
-         {
-             user: loggedInUser, accessToken, refreshToken  // ye isliye bhejte h if frontend apne hisaab se ise handle krna chahe to
-         },
-         "user logged In sucessfully"
-     )
- )
-   } catch (error) {
-    throw new ApiError(500, error.message || "error in login")
-   }
 
 })
 
 const logoutUser = asyncHandler(async(req,res,next)=>{
     // cookies needs to be clear
-    // refresh tocken bhi manage krna pdega, nhi to bina login k on bassis of this user can access as login
+    // clear refresh tocken
     User.findByIdAndUpdate(
        await req.user._id,
         {
@@ -154,7 +151,7 @@ const logoutUser = asyncHandler(async(req,res,next)=>{
             }
         },
         {
-            new: true  // aise kr skte h taki response m Returning the Updated Document
+            new: true  // do this new true so that will get reposnse back 
         }
     )
     const options = {
@@ -173,45 +170,45 @@ const logoutUser = asyncHandler(async(req,res,next)=>{
 })
 
 const refreshAcessToken = asyncHandler(async(req,res,next)=>{
-
-    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+// can apply redis here to store 
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken; 
     if (!incomingRefreshToken){
-        throw new ApiError('401', "unauthorized request");
+        return res.status(400).json( new ApiError(401,  "unauthorized request"));
     }
 
     try {
         const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
-    
-        const user = User.findById(decodedToken?._id);
+        const user = await User.findById(decodedToken?._id);
+
         if (!user){
-            throw new ApiError('401', "Invalid refresh Token");
+            return res.status(500).json( new ApiError(501, "Invalid refresh Token"));
         }
     
-        if(incomingRefreshToken!==user?.refrestToken){
-            throw new ApiError('401', "refresh Token is expired or used");
+        if(incomingRefreshToken!==user?.refreshToken){
+            user.refreshToken
+            return res.status(400).json( new ApiError(401, "refresh Token is expired or used"));
         }
         //generate new token
         // generateAccessAndRefreshToken
-        const {accessToken,NewRefreshToken} = await generateAccessAndRefreshToken(user._id); //isem time lg skta h to await lga do
+        const {accessToken,NewRefreshToken} = await generateAccessAndRefreshToken(user._id);
     
         const options = {
             httpOnly:true,
             secure:true
-        }  // that means option set h cookies ab server se hi modified hongi khi or se nhi
-        
+        }
         return res.status(200)
         .cookie('accessToken', accessToken, options)
         .cookie('refreshToken',NewRefreshToken,options)
         .json(
             new ApiResponse(200,
                 {
-                 accessToken, refreshToken: NewRefreshToken  // ye isliye bhejte h if frontend apne hisaab se ise handle krna chahe to
+                 accessToken, refreshToken: NewRefreshToken
                 },
                 "Access token refreshed"
             )
         )
     } catch (error) {
-        throw new ApiError(500, error.message || "Invalid refresh Token") 
+        return res.status(500).json( new ApiError(501, error.message || "Invalid refresh Token"));
     }
 })
 
@@ -221,12 +218,11 @@ const currentPasswordChange = asyncHandler(async(req,res,next)=>{
     const user = await User.findById(req.user?._id) // cause of auth middleware we have access to user details
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword); // means existing password seems correct
     if(!isPasswordCorrect){
-        throw new ApiError(400, "Invalid  old password ");
+        return res.status(400).json( new ApiError(401,  "Invalid  old password "));
     }
     user.password = newPassword;  // set this in User and save in model in password but dont send back
     await user.save({validateBeforeSave:false});
-     return res.status(200).json(new ApiResponse(200, {}, "password change successfully"));
-
+    return res.status(200).json(new ApiResponse(200, {}, "password change successfully"));
 })
 
 const getCurrentUser = asyncHandler(async(req,res,next)=>{
@@ -235,13 +231,15 @@ const getCurrentUser = asyncHandler(async(req,res,next)=>{
 
 const updateRoleDetails = asyncHandler(async(req,res,next)=>{
     // update role details if user is Admin
-    console.log("req.user--", req.user);
     const {role} = req.body;
 
+    if (!role) {
+        return res.status(400).json( new ApiError(401, "role field required"));
+    }
     // Check role enum (if provided)
     const validRoles = ['Admin', 'Manager', 'User'];
     if (role && !validRoles.includes(role)) {
-        throw new ApiError(400, `role must be one of the following: ${validRoles.join(', ')}.`);
+        return res.status(400).json( new ApiError(400, `role must be one of the following: ${validRoles.join(', ')}.`));
     }
     const user = await User.findByIdAndUpdate(req.user?._id, //accept 3 parameter
         {
@@ -249,7 +247,7 @@ const updateRoleDetails = asyncHandler(async(req,res,next)=>{
                 role: role || 'User'
             }
         },
-        {new :true} // agar new true h , to updated info return krta h
+        {new :true} 
     ).select("-password");
 
     res.status(200).json(new ApiResponse(200, user, "account details update succeessfully"));

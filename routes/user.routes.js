@@ -8,15 +8,11 @@ router.route("/login").post(loginUser)
 
 // secured routes
 router.route("/logout").post(verifyJWT, logoutUser) 
-
-// verifyJWT middleware m cookies se jwt token verify krke uski id se db m call ki or
-// user info req m bhejdi taaki on that basis logout kr ske
-
-router.route("/refresh-token").post(verifyJWT, refreshAcessToken);
+router.route("/refresh-token").post(refreshAcessToken);
 router.route("/resetPassword").post(verifyJWT, currentPasswordChange);
 router.route("/getCurrentUser").get(verifyJWT, getCurrentUser);
 router.route("/updateRole").patch(verifyJWT, updateRoleDetails);
 
-// NOTE: in verifyJWT middleware it gets 
+// NOTE: in verifyJWT middleware it gets userId from validate that token from cookies or header based on that will validate
 
 export default router;

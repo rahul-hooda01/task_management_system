@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
 
-export const verifyJWT = asyncHandler(async(req,res,x)=>{
+export const verifyJWT = asyncHandler(async(req,res,next)=>{
     // we have cookies acess because of cookie parsre used as  middleware in app.js
 
    try {
@@ -17,7 +17,7 @@ export const verifyJWT = asyncHandler(async(req,res,x)=>{
  
      const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
      if(!user){
-        return res.status(400).json( new ApiError(404, "Invalid Access Token"));
+        return res.status(400).json( new ApiError(404, "Invalid or Expired Access Token"));
      }
      req.user = user;
      next();
