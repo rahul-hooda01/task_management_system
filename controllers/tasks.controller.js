@@ -76,12 +76,6 @@ const getMyTasks = asyncHandler(async(req,res,next)=>{
 });
 const getAllAssignTasksByUserId = asyncHandler(async(req,res,next)=>{
     const id = req.query.id || req.params.id; 
-
-    // Validate Task ID
-    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-        return res.status(400).json( new ApiError(400, "Invalid Task ID"));
-    }
-
     try {
         const tasks = await Task.find({ assignedTo: id });
         if (!tasks.length) {
@@ -96,10 +90,6 @@ const getAllAssignTasksByUserId = asyncHandler(async(req,res,next)=>{
 });
 const getTaskById = asyncHandler(async(req,res,next)=>{
     const taskId = req.query.id || req.params.id; 
-    // Validate Task ID
-    if (!taskId.match(/^[0-9a-fA-F]{24}$/)) {
-        return res.status(400).json( new ApiError(400, "Invalid Task ID"));
-    }
     try {
         const task = await Task.findById(taskId).populate("createdBy assignedTo", "userName email");
     
@@ -116,10 +106,6 @@ const getTaskById = asyncHandler(async(req,res,next)=>{
 const assignTask = asyncHandler(async(req,res,next)=>{
     const taskId = req.query.id || req.params.id;
     const {userId} = req.body;
-    // Validate Task ID
-    if (!taskId.match(/^[0-9a-fA-F]{24}$/)) {
-        return res.status(400).json( new ApiError(400, "Invalid Task ID"));
-    }
     // Validate User ID
     if (!userId.match(/^[0-9a-fA-F]{24}$/)) {
         return res.status(400).json( new ApiError(400, "Invalid User ID"));
@@ -145,7 +131,6 @@ const assignTask = asyncHandler(async(req,res,next)=>{
 });
 const updateTaskById = asyncHandler(async(req,res,next)=>{
     const { error } = taskValidationSchema.validate(req.body);
-
     // Return validation errors
     if (error) {
         return res.status(400).json( new ApiError(401, error.details[0].message));
@@ -160,8 +145,6 @@ const updateTaskById = asyncHandler(async(req,res,next)=>{
         if (!task) {
             return next(new ApiError(404, "Task not found"));
         }
-    
-    
         // Update fields if provided
         if (title) task.title = title;
         if (description) task.description = description;
@@ -177,10 +160,6 @@ const updateTaskById = asyncHandler(async(req,res,next)=>{
 });
 const deleteTaskById = asyncHandler(async(req,res,next)=>{
     const taskId = req.query.id || req.params.id;
-    // Validate Task ID
-    if (!taskId.match(/^[0-9a-fA-F]{24}$/)) {
-        return res.status(400).json( new ApiError(400, "Invalid Task ID"));
-    }
     try {
         const task = await Task.findById(taskId);
         if (!task) {

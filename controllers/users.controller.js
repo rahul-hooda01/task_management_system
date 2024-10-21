@@ -1,8 +1,9 @@
+import Joi from "joi";
+import jwt from "jsonwebtoken";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js"
 import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshToken = async(user_id)=>{ // yhs p normal async use kiya kyuki isi file m handle krenge thoda sa response
 try {
@@ -24,61 +25,72 @@ try {
 
 }
 
-const registerUser = asyncHandler(async(req,res,next)=>{
-    // get details from frontend, validation empty or other things
-    // check if user already exist userName and email
-    // create user object- create entry in db, except "-password -refreshToken" send response to frontend
+// Define the Joi validation schema
+const registerUserSchema = Joi.object({
+    userName: Joi.string()
+        .alphanum()
+        .min(3)
+        .max(30)
+        .required()
+        .messages({
+            "string.base": "Username should be a type of 'text'.",
+            "string.empty": "Username cannot be an empty field.",
+            "string.min": "Username should have a minimum length of 3.",
+            "string.max": "Username should have a maximum length of 30.",
+            "any.required": "Username is a required field.",
+        }),
+    email: Joi.string()
+        .email()
+        .required()
+        .messages({
+            "string.email": "Please provide a valid email address.",
+            "string.empty": "Email cannot be an empty field.",
+            "any.required": "Email is a required field.",
+        }),
+    password: Joi.string()
+        .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/)
+        .required()
+        .messages({
+            "string.pattern.base":
+                "Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, and one number.",
+            "string.empty": "Password cannot be an empty field.",
+            "any.required": "Password is a required field.",
+        }),
+    role: Joi.string()
+        .valid("Admin", "Manager", "User")
+        .default("User")
+        .messages({
+            "any.only": "Role must be one of the following: Admin, Manager, User.",
+        }),
+});
+
+// Controller function for user registration
+const registerUser = asyncHandler(async (req, res, next) => {
     const { userName, email, password, role } = req.body;
-
-     // Regex patterns for validation
-    const usernamePattern = /^[a-zA-Z0-9]{3,30}$/; // Alphanumeric, 3-30 characters
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Basic email pattern
-    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/; 
-    // At least one lowercase, one uppercase, one number, 8+ characters
-
-    if (!userName || !usernamePattern.test(userName)) {
-        return res.status(400).json( new ApiError(404, 'Username must be 3-30 characters long and alphanumeric only'));
+  
+    // Validate the request body using Joi
+    const { error } = registerUserSchema.validate({ userName, email, password, role });
+    if (error) {
+        return res.status(400).json( new ApiError(400, error.details[0].message));
     }
-
-    // Email validation: standard email pattern
-    if (!email || !emailPattern.test(email)) {
-        return res.status(400).json( new ApiError(404, 'Please provide a valid email address'));
-    }
-
-    // Password validation: minimum 8 characters, at least one uppercase, one lowercase, and one digit
-    if (!password || !passwordPattern.test(password)) {
-        return res.status(400).json( new ApiError(404, 
-            'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number',
-        ));
-    }
-
-    // Validate if all required fields are provided
-    if ([userName, email, password].some(field => field?.trim() === "")) {
-        return res.status(400).json( new ApiError(404, "All fields (userName, Email, password) are required"));
-    }
-
-    const existedUser = await User.findOne({ 
-        $or: [{ userName }, { email }]
-    })
-    if (existedUser){
+  
+    // Check if a user already exists with the provided username or email
+    const existingUser = await User.findOne({ 
+      $or: [{ userName }, { email }]
+    });
+    if (existingUser) {
         return res.status(400).json( new ApiError(409, "User with Email & userName already exist"));
     }
-    // Check role enum (if provided)
-    const validRoles = ['Admin', 'Manager', 'User'];
-    if (role && !validRoles.includes(role)) {
-        return res.status(400).json( new ApiError(400, `role must be one of the following: ${validRoles.join(', ')}.`));
-    }
-    
-    // //create user
-
+  
+    // Create the user object
     const user = await User.create({
         userName,
         email,
         password,
         role: role || 'User'
-    })
-
-    //test user created or not
+    });
+  
+    // Retrieve the created user (without password and refreshToken fields)
     const userCreated = await User.findById(user._id).select(
         "-password -refreshToken"  // except these two field all user data can be sent to frontend
     )
@@ -89,7 +101,8 @@ const registerUser = asyncHandler(async(req,res,next)=>{
     return res.status(201).json( // data return(res) to frontend
        new ApiResponse(200, userCreated, "user registered successfully")
     );
-})
+});
+
 
 const loginUser = asyncHandler(async(req,res,next)=>{
     //get data from req.body, validate data( if empty or not, if available userName or email in db)
@@ -249,11 +262,6 @@ const updateRoleDetailsById = asyncHandler(async(req,res,next)=>{
 
 const getUserById = asyncHandler(async(req,res,next)=>{
     const id = req.query.id || req.params.id; 
-
-    // Validate property ID
-    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-        return res.status(400).json( new ApiError(400, "Invalid property ID"));
-    }
 
     try {
         const user = await User.findById(id).select(
