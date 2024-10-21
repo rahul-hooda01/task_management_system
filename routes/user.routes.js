@@ -28,6 +28,8 @@ router.route("/updateRoleByUserId/:id").patch(verifyJWT, validateSchemaId, autho
 router.route("/getUserById/:id").get(verifyJWT, validateSchemaId, authorizeRoles('Admin', 'Manager'), getUserById);
 router.route("/getAllUsers").get(verifyJWT, authorizeRoles('Admin'), getAllUsers);
 
+// Notifications set [off,email,sms]  create a api for that
+
 // NOTE: in verifyJWT middleware it gets userId from validate that token from cookies or header based on that will validate
 
 export default router;

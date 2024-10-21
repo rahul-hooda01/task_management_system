@@ -39,5 +39,9 @@ router.route("/updateTask/:id").patch(verifyJWT, validateSchemaId, authorizeRole
 // Delete a Task by ID (secured) admin
 router.route("/deleteTask/:id").delete(verifyJWT, validateSchemaId, authorizeRoles('Admin'), deleteTaskById);
 
+// Analytics
+// -- Get the number of completed tasks.
+// --  Get count of tasks by status (Pending, In Progress, Overdue).
+
 
 export default router;

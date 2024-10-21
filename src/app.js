@@ -1,8 +1,20 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import morgan from "morgan";
+import { logger } from "../logs/logger.js";
+
 
 const app =express();
+
+// Use Morgan to log HTTP requests
+app.use(
+    morgan('combined', {
+        stream: {
+            write: (message) => logger.info(message.trim()),  // Send logs to Winston
+        },
+    })
+);
 
 app.use(cors({  // app.use(cors())
     origin: process.env.CORS_ORIGIN,

@@ -1,9 +1,10 @@
+import Joi from "joi";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js"
 import { Task } from "../models/task.model.js";
 import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import Joi from "joi";
+import { logger } from "../logs/logger.js";
 
 // Validation schema using Joi
 const taskValidationSchema = Joi.object({
@@ -37,6 +38,7 @@ const createTask = asyncHandler(async(req,res,next)=>{
   
     const taskCreated = await Task.findById(task._id);
     if (!taskCreated){
+        logger.error("something went wrong while creating task");
         return res.status(500).json( new ApiError(500, "something went wrong while creating task"));
     }
 
@@ -59,6 +61,7 @@ const getAllTasks = asyncHandler(async(req,res,next)=>{
         res.status(200).json(
           new ApiResponse(200, tasks, "tasks fetched successfully"));
       } catch (error) {
+        logger.error(`Server error while fetching tasks: ${error.message}`);
         // Handle any potential errors and pass them to the error-handling middleware
         return res.status(500).json( new ApiError(501, error.message || "Server error while fetching tasks"));
       }

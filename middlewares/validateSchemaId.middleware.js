@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { logger } from "../logs/logger.js"
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -22,7 +23,8 @@ export const validateSchemaId = asyncHandler(async (req, res, next) => {
     // Validate the schemaId using Joi
     const { error } = schemaIdValidation.validate(id);
     if (error) {
-      return res.status(400).json( new ApiError(404, error.details[0].message));
+        logger.error(`Validation error ${error.details[0].message}`);
+        return res.status(400).json( new ApiError(404, error.details[0].message));
     }
   
     // If validation passes, proceed to the next middleware or controller logic

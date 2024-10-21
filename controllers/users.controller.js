@@ -1,9 +1,13 @@
 import Joi from "joi";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js"
 import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { logger } from "../logs/logger.js";
+
 
 const generateAccessAndRefreshToken = async(user_id)=>{ // yhs p normal async use kiya kyuki isi file m handle krenge thoda sa response
 try {
@@ -20,6 +24,7 @@ try {
     return {accessToken, refreshToken};
 
 } catch (error) {
+    logger.error('something went wrong while creating refreshToken');
     return res.status(500).json( new ApiError(500, 'something went wrong while creating refreshToken'));
 }
 
@@ -95,9 +100,11 @@ const registerUser = asyncHandler(async (req, res, next) => {
         "-password -refreshToken"  // except these two field all user data can be sent to frontend
     )
     if (!userCreated){
+        logger.error("something went wrong while registering user");
         return res.status(500).json( new ApiError(500, "something went wrong while registering user"));
     }
-
+    
+    logger.info("user registered successfully");
     return res.status(201).json( // data return(res) to frontend
        new ApiResponse(200, userCreated, "user registered successfully")
     );
@@ -142,7 +149,7 @@ const loginUser = asyncHandler(async(req,res,next)=>{
         .json(
             new ApiResponse(200,
                 {
-                    user: loggedInUser, accessToken, refreshToken  // sent in respose if frontend wants to use it
+                    user: loggedInUser  // sent in respose if frontend wants to use it
                 },
                 "user logged In sucessfully"
             )
@@ -183,8 +190,7 @@ const logoutUser = asyncHandler(async(req,res,next)=>{
 })
 
 const refreshAcessToken = asyncHandler(async(req,res,next)=>{
-// can apply redis here to store 
-    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken; 
+    const incomingRefreshToken = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearrer", "");
     if (!incomingRefreshToken){
         return res.status(400).json( new ApiError(401,  "unauthorized request"));
     }
@@ -197,9 +203,12 @@ const refreshAcessToken = asyncHandler(async(req,res,next)=>{
             return res.status(500).json( new ApiError(501, "Invalid refresh Token"));
         }
     
-        if(incomingRefreshToken!==user?.refreshToken){
-            user.refreshToken
-            return res.status(400).json( new ApiError(401, "refresh Token is expired or used"));
+        // Secure comparison of tokens to avoid timing attacks
+        if (!crypto.timingSafeEqual(
+            Buffer.from(incomingRefreshToken), 
+            Buffer.from(user?.refreshToken)
+        )) {
+            return res.status(401).json(new ApiError(401, "Refresh Token is expired or used"));
         }
         //generate new token
         // generateAccessAndRefreshToken
@@ -207,16 +216,15 @@ const refreshAcessToken = asyncHandler(async(req,res,next)=>{
     
         const options = {
             httpOnly:true,
-            secure:true
+            secure:true,
+            sameSite: 'Strict'
         }
         return res.status(200)
         .cookie('accessToken', accessToken, options)
         .cookie('refreshToken',NewRefreshToken,options)
         .json(
             new ApiResponse(200,
-                {
-                 accessToken, refreshToken: NewRefreshToken
-                },
+                {},
                 "Access token refreshed"
             )
         )
@@ -292,6 +300,7 @@ const getAllUsers = asyncHandler(async (req, res, next) => {
       res.status(200).json(
         new ApiResponse(200, users, "Users fetched successfully"));
     } catch (error) {
+        logger.error(`Server error while fetching users : ${error.message}`);
       // Handle any potential errors and pass them to the error-handling middleware
       return res.status(500).json( new ApiError(501, error.message || "Server error while fetching users"));
     }
