@@ -7,7 +7,8 @@ import {
     getTaskById,
     assignTask,
     updateTaskById,
-    deleteTaskById 
+    deleteTaskById,
+    getTaskCountByStatus
 } from "../controllers/tasks.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/authorization.middleware.js";
@@ -40,8 +41,8 @@ router.route("/updateTask/:id").patch(verifyJWT, validateSchemaId, authorizeRole
 router.route("/deleteTask/:id").delete(verifyJWT, validateSchemaId, authorizeRoles('Admin'), deleteTaskById);
 
 // Analytics
-// -- Get the number of completed tasks.
 // --  Get count of tasks by status (Pending, In Progress, Overdue).
+router.route("/getTaskCountByStatus").get(verifyJWT, getTaskCountByStatus);
 
 
 export default router;

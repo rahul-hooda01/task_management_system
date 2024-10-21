@@ -8,7 +8,8 @@ import {
     registerUser,
     updateRoleDetailsById,
     getUserById,
-    getAllUsers
+    getAllUsers,
+    changeNotificationType
 } from "../controllers/users.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/authorization.middleware.js";
@@ -29,6 +30,7 @@ router.route("/getUserById/:id").get(verifyJWT, validateSchemaId, authorizeRoles
 router.route("/getAllUsers").get(verifyJWT, authorizeRoles('Admin'), getAllUsers);
 
 // Notifications set [off,email,sms]  create a api for that
+router.route("/changeNotificationType").patch(verifyJWT, changeNotificationType);
 
 // NOTE: in verifyJWT middleware it gets userId from validate that token from cookies or header based on that will validate
 

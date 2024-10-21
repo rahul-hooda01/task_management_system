@@ -177,6 +177,30 @@ const deleteTaskById = asyncHandler(async(req,res,next)=>{
     }
 });
 
+const getTaskCountByStatus = asyncHandler(async (req, res, next) => {
+    const userId = req.user?._id; // User ID from auth middleware.
+
+    // Aggregate tasks by status.
+    const taskCounts = await Task.aggregate([
+        { $match: { assignedTo: userId } }, // Filter tasks by userId.
+        { $group: { _id: "$status", count: { $sum: 1 } } }, // Group by status and count.
+    ]);
+
+    // Initialize counts to 0 for all statuses to avoid missing fields.
+    const response = {
+        Pending: 0,
+        'In Progress': 0,
+        Completed: 0,
+    };
+    // Update the response object with actual counts from aggregation.
+    taskCounts.forEach(item => {
+        response[item._id] = item.count;
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, response, "Task counts by status retrieved successfully")
+    );
+});
 
 export {
     createTask, 
@@ -186,5 +210,6 @@ export {
     getTaskById,
     assignTask,
     updateTaskById,
-    deleteTaskById
+    deleteTaskById,
+    getTaskCountByStatus
 }

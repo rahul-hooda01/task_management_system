@@ -19,10 +19,7 @@ const userSchema = new mongoose.Schema({
         trim:true,
     },
     role: { type: String, enum: ['Admin', 'Manager', 'User'], default: 'User' },
-    notificationsEnabled: {
-        type: Boolean,
-        default: true,
-    },
+    notificationsEnabled: { type: String, enum: ['stop', 'email', 'sms'], default: 'email' },
     password: {
         type:String,
         required:[true, 'Password is required'],

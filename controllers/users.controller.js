@@ -66,14 +66,20 @@ const registerUserSchema = Joi.object({
         .messages({
             "any.only": "Role must be one of the following: Admin, Manager, User.",
         }),
+    notificationsEnabled: Joi.string()
+        .valid("stop", "email", "sms")
+        .default("email")
+        .messages({
+            "any.only": "notification must be one of the following: stop, email, sms.",
+        }),
 });
 
 // Controller function for user registration
 const registerUser = asyncHandler(async (req, res, next) => {
-    const { userName, email, password, role } = req.body;
+    const { userName, email, password, role, notificationsEnabled } = req.body;
   
     // Validate the request body using Joi
-    const { error } = registerUserSchema.validate({ userName, email, password, role });
+    const { error } = registerUserSchema.validate({ userName, email, password, role, notificationsEnabled });
     if (error) {
         return res.status(400).json( new ApiError(400, error.details[0].message));
     }
@@ -91,7 +97,8 @@ const registerUser = asyncHandler(async (req, res, next) => {
         userName,
         email,
         password,
-        role: role || 'User'
+        role: role || 'User',
+        notificationsEnabled: notificationsEnabled || 'email'
     });
   
     // Retrieve the created user (without password and refreshToken fields)
@@ -300,6 +307,28 @@ const getAllUsers = asyncHandler(async (req, res, next) => {
     }
 });
 
+const changeNotificationType = asyncHandler(async (req, res, next) => {
+    const { notificationType } = req.body;
+
+    // Validate notification type
+    const validTypes = ['stop', 'email', 'sms'];
+    if (!validTypes.includes(notificationType)) {
+        return res.status(400).json(new ApiError(400, "Invalid notification type"));
+    }
+
+    // Get the user from the auth middleware
+    const user = await User.findById(req.user?._id);
+    if (!user) {
+        return res.status(404).json(new ApiError(404, "User not found"));
+    }
+
+    // Update the notification type
+    user.notificationsEnabled = notificationType;
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(200).json(new ApiResponse(200, {}, "Notification type updated successfully"));
+});
+
 export {
     registerUser,
     loginUser,
@@ -309,5 +338,6 @@ export {
     getCurrentUser,
     updateRoleDetailsById,
     getUserById,
-    getAllUsers
+    getAllUsers,
+    changeNotificationType
 };
