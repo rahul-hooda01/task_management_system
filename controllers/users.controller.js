@@ -6,6 +6,7 @@ import {ApiError} from "../utils/ApiError.js"
 import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { logger } from "../logs/logger.js";
+import { getCache, setCache } from "../controllers/redis.controller.js";
 
 
 const generateAccessAndRefreshToken = async(user_id)=>{ // yhs p normal async use kiya kyuki isi file m handle krenge thoda sa response
@@ -259,22 +260,53 @@ const getCurrentUser = asyncHandler(async(req,res,next)=>{
     return res.status(200).json(new ApiResponse(200, req.user, "current user fetch sucesfully"));
 })
 
-const updateRoleDetailsById = asyncHandler(async(req,res,next)=>{
-    const id = req.query.id || req.params.id; 
-    const {newRole} = req.body;
-    if (!newRole) {
-        return res.status(400).json( new ApiError(401,  "new role field required"));
-    }
-    // Check newRole enum (if provided)
-    const validRoles = ['Admin', 'Manager', 'User'];
-    if (newRole && !validRoles.includes(newRole)) {
-        return res.status(400).json( new ApiError(400, `newRole must be one of the following: ${validRoles.join(', ')}.`));
-    }
-    const user = await User.findById(id) // cause of auth middleware we have access to user details
+// Define the Joi validation schema
+const updateUserSchema = Joi.object({
 
-    user.role = newRole;  // set this in User and save in model in role but dont send back
+    phone: Joi.string()
+        .pattern(/^[0-9]{10}$/)
+        .required()
+        .messages({
+            "string.pattern.base": "Phone number must be exactly 10 digits.",
+            "string.empty": "Phone number cannot be an empty field.",
+            "any.required": "Phone number is a required field.",
+        }),
+    role: Joi.string()
+        .valid("Admin", "Manager", "User")
+        .default("User")
+        .messages({
+            "any.only": "Role must be one of the following: Admin, Manager, User.",
+        }),
+    notificationsEnabled: Joi.string()
+        .valid("stop", "email", "sms")
+        .default("email")
+        .messages({
+            "any.only": "notification must be one of the following: stop, email, sms.",
+        }),
+});
+
+const updateUserById = asyncHandler(async(req,res,next)=>{
+    const { error } = updateUserSchema.validate(req.body);
+    // Return validation errors
+    if (error) {
+        return res.status(400).json( new ApiError(401, error.details[0].message));
+    }
+    const id = req.query.id || req.params.id;
+    const { role, notificationsEnabled, phone } = req.body;
+
+    const user = await User.findById(id) // cause of auth middleware we have access to user details
+    if (!user) {
+        return next(new ApiError(404, "user not found"));
+        // return res.status(500).json( new ApiError(501, "Invalid refresh Token"));
+    }
+    if (role) user.role = role;
+    if (notificationsEnabled) user.notificationsEnabled = notificationsEnabled;
+    if (phone) user.phone = phone;
+
     await user.save({validateBeforeSave:false});
-    return res.status(200).json(new ApiResponse(200, {}, `role change successfully to role: ${newRole}`));
+    const cacheKey = `user:${id}`; // Redis key format
+    await setCache(cacheKey, user); // Overwrite with new data
+    return res.status(200).json(new ApiResponse(200, user, "user Update successfully"));
 });
 
 const getUserById = asyncHandler(async(req,res,next)=>{
@@ -344,7 +376,7 @@ export {
     refreshAcessToken,
     currentPasswordChange,
     getCurrentUser,
-    updateRoleDetailsById,
+    updateUserById,
     getUserById,
     getAllUsers,
     changeNotificationType

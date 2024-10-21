@@ -5,6 +5,7 @@ import { Task } from "../models/task.model.js";
 import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { logger } from "../logs/logger.js";
+import notificationService from '../services/notification.service.js';
 
 // Validation schema using Joi
 const taskValidationSchema = Joi.object({
@@ -40,6 +41,12 @@ const createTask = asyncHandler(async(req,res,next)=>{
     if (!taskCreated){
         logger.error("something went wrong while creating task");
         return res.status(500).json( new ApiError(500, "something went wrong while creating task"));
+    }
+    const message = `Task created as title: ${taskCreated.title}`;
+    if (req.user.notificationsEnabled === 'email') {
+        await notificationService.sendEmail(req.user.email, 'Task Status Updated', message);
+    } else if (req.user.notificationsEnabled === 'sms') {
+        await notificationService.sendSMS(req.user.phone, message);
     }
 
     return res.status(201).json( // data return(res) to frontend

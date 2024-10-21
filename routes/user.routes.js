@@ -6,7 +6,7 @@ import {
     logoutUser,
     refreshAcessToken,
     registerUser,
-    updateRoleDetailsById,
+    updateUserById,
     getUserById,
     getAllUsers,
     changeNotificationType
@@ -25,7 +25,7 @@ router.route("/logout").post(verifyJWT, logoutUser)
 router.route("/refresh-token").post(refreshAcessToken);
 router.route("/resetPassword").post(verifyJWT, currentPasswordChange);
 router.route("/getCurrentUser").get(verifyJWT, getCurrentUser);
-router.route("/updateRoleByUserId/:id").patch(verifyJWT, validateSchemaId, authorizeRoles('Admin'), updateRoleDetailsById);
+router.route("/updateUserById/:id").patch(verifyJWT, validateSchemaId, authorizeRoles('Admin', 'Manager'), updateUserById);
 router.route("/getUserById/:id").get(verifyJWT, validateSchemaId, authorizeRoles('Admin', 'Manager'), getUserById);
 router.route("/getAllUsers").get(verifyJWT, authorizeRoles('Admin'), getAllUsers);
 

@@ -23,7 +23,7 @@ class NotificationService {
         await this.twilioClient.messages.create({
             body,
             from: process.env.TWILIO_PHONE_NUMBER,
-            to,
+            to: `+91${to}`,
         });
     }
 }

@@ -26,7 +26,6 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
 
         // Check if user data is cached in Redis
         let user = await getCache(`user:${userId}`);
-        console.log('user--from redis--', user);
         if (!user) {
             // If not in cache, fetch from DB and cache the result
             user = await User.findById(userId).select("-password -refreshToken");
