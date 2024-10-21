@@ -2,10 +2,15 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import morgan from "morgan";
+import helmet from "helmet";  // Import Helmet
+
 import { logger } from "../logs/logger.js";
 
 
 const app =express();
+
+// Use Helmet to set secure HTTP headers
+app.use(helmet());
 
 // Use Morgan to log HTTP requests
 app.use(
@@ -26,9 +31,6 @@ app.use(express.json({
 }))
 
 app.use(express.urlencoded({extended:true, limit:"16kb"}))
-
-// to stare some static file or img or icon in our server
-app.use(express.static("public"))
 
 //just use to read and perform opertaion from server to user's cookies
 app.use(cookieParser())

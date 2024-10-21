@@ -138,9 +138,10 @@ const loginUser = asyncHandler(async(req,res,next)=>{
         
         // send cookies to frontend with user info
         const options = {
-            httpOnly:true,
-            secure:true
-        }  // that means option set, now cookies will modified from server only
+            httpOnly: true,  // Ensure the cookie is only accessible via HTTP(S)
+            secure: process.env.NODE_ENV === 'production',  // Use 'secure' in production (HTTPS)
+            sameSite: 'strict',  // Prevent CSRF attacks
+        };
         
         return res.status(200)
         .cookie('accessToken', accessToken, options)
@@ -205,16 +206,15 @@ const refreshAcessToken = asyncHandler(async(req,res,next)=>{
         }
         //generate new token
         // generateAccessAndRefreshToken
-        const {accessToken,NewRefreshToken} = await generateAccessAndRefreshToken(user._id);
-    
+        const {accessToken,refreshToken} = await generateAccessAndRefreshToken(user._id);
         const options = {
-            httpOnly:true,
-            secure:true,
-            sameSite: 'Strict'
-        }
+            httpOnly: true,  // Ensure the cookie is only accessible via HTTP(S)
+            secure: process.env.NODE_ENV === 'production',  // Use 'secure' in production (HTTPS)
+            sameSite: 'strict',  // Prevent CSRF attacks
+        };
         return res.status(200)
         .cookie('accessToken', accessToken, options)
-        .cookie('refreshToken',NewRefreshToken,options)
+        .cookie('refreshToken',refreshToken,options)
         .json(
             new ApiResponse(200,
                 {},
