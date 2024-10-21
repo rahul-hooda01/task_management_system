@@ -32,17 +32,16 @@ try {
 // Define the Joi validation schema
 const registerUserSchema = Joi.object({
     userName: Joi.string()
-        .alphanum()
-        .min(3)
-        .max(30)
-        .required()
-        .messages({
-            "string.base": "Username should be a type of 'text'.",
-            "string.empty": "Username cannot be an empty field.",
-            "string.min": "Username should have a minimum length of 3.",
-            "string.max": "Username should have a maximum length of 30.",
-            "any.required": "Username is a required field.",
-        }),
+    .pattern(/^[a-zA-Z0-9_]{3,30}$/)
+    .required()
+    .messages({
+        "string.base": "Username should be a type of 'text'.",
+        "string.empty": "Username cannot be an empty field.",
+        "string.min": "Username should have a minimum length of 3.",
+        "string.max": "Username should have a maximum length of 30.",
+        "string.pattern.base": "Username can only contain letters, numbers, and underscores.",
+        "any.required": "Username is a required field.",
+    }),
     email: Joi.string()
         .email()
         .required()
@@ -60,6 +59,14 @@ const registerUserSchema = Joi.object({
             "string.empty": "Password cannot be an empty field.",
             "any.required": "Password is a required field.",
         }),
+    phone: Joi.string()
+        .pattern(/^[0-9]{10}$/)
+        .required()
+        .messages({
+            "string.pattern.base": "Phone number must be exactly 10 digits.",
+            "string.empty": "Phone number cannot be an empty field.",
+            "any.required": "Phone number is a required field.",
+        }),
     role: Joi.string()
         .valid("Admin", "Manager", "User")
         .default("User")
@@ -76,10 +83,10 @@ const registerUserSchema = Joi.object({
 
 // Controller function for user registration
 const registerUser = asyncHandler(async (req, res, next) => {
-    const { userName, email, password, role, notificationsEnabled } = req.body;
+    const { userName, email, password, role, notificationsEnabled, phone } = req.body;
   
     // Validate the request body using Joi
-    const { error } = registerUserSchema.validate({ userName, email, password, role, notificationsEnabled });
+    const { error } = registerUserSchema.validate({ userName, email, password, role, notificationsEnabled, phone });
     if (error) {
         return res.status(400).json( new ApiError(400, error.details[0].message));
     }
@@ -98,7 +105,8 @@ const registerUser = asyncHandler(async (req, res, next) => {
         email,
         password,
         role: role || 'User',
-        notificationsEnabled: notificationsEnabled || 'email'
+        notificationsEnabled: notificationsEnabled || 'email',
+        phone
     });
   
     // Retrieve the created user (without password and refreshToken fields)
