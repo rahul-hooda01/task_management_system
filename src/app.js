@@ -24,9 +24,11 @@ app.use(cookieParser())
 
 //roues import
 import userRouter from "../routes/user.routes.js"
+import taskRouter from "../routes/task.routes.js"
 
 //routes decleration
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/tasks", taskRouter);
 
 
 
