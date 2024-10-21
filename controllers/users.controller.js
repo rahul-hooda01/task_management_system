@@ -1,6 +1,5 @@
 import Joi from "joi";
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
 
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js"
@@ -190,25 +189,19 @@ const logoutUser = asyncHandler(async(req,res,next)=>{
 })
 
 const refreshAcessToken = asyncHandler(async(req,res,next)=>{
-    const incomingRefreshToken = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearrer", "");
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken; 
     if (!incomingRefreshToken){
         return res.status(400).json( new ApiError(401,  "unauthorized request"));
     }
-
     try {
         const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
         const user = await User.findById(decodedToken?._id);
-
         if (!user){
             return res.status(500).json( new ApiError(501, "Invalid refresh Token"));
         }
-    
-        // Secure comparison of tokens to avoid timing attacks
-        if (!crypto.timingSafeEqual(
-            Buffer.from(incomingRefreshToken), 
-            Buffer.from(user?.refreshToken)
-        )) {
-            return res.status(401).json(new ApiError(401, "Refresh Token is expired or used"));
+
+        if(incomingRefreshToken!==user?.refreshToken){
+            return res.status(400).json( new ApiError(401, "refresh Token is expired or used"));
         }
         //generate new token
         // generateAccessAndRefreshToken
@@ -229,6 +222,7 @@ const refreshAcessToken = asyncHandler(async(req,res,next)=>{
             )
         )
     } catch (error) {
+        logger.error(`error in refresh access token: ${ error.message}`)
         return res.status(500).json( new ApiError(501, error.message || "Invalid refresh Token"));
     }
 })
