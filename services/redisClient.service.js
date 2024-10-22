@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import {logger} from "../logs/logger.js"
 // Load environment variables
 dotenv.config();
-
+logger.info(`in redis --------------------test logs--------------->process.env.REDIS_HOST: ${process.env.REDIS_HOST}`);
 class RedisClient {
     constructor() {
         if (!RedisClient.instance) {
