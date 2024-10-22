@@ -1,16 +1,16 @@
 import Redis from "ioredis";
 import dotenv from "dotenv";
-import {logger} from "../logs/logger.js"
+import { logger } from "../logs/logger.js";
+
 // Load environment variables
 dotenv.config();
-logger.info(`in redis --------------------test logs--------------->process.env.REDIS_HOST: ${process.env.REDIS_HOST}`);
+logger.info(`In Redis --------------------test logs---------------> process.env.REDIS_URL: ${process.env.REDIS_URL}`);
+
 class RedisClient {
     constructor() {
         if (!RedisClient.instance) {
-            RedisClient.instance = new Redis({
-                host: process.env.REDIS_HOST,
-                port: process.env.REDIS_PORT,
-                password: process.env.REDIS_PASSWORD || undefined,
+            // Create a new Redis instance using the REDIS_URL environment variable
+            RedisClient.instance = new Redis(process.env.REDIS_URL, {
                 retryStrategy(times) {
                     const delay = Math.min(times * 50, 2000); // Retry every few seconds
                     return delay;

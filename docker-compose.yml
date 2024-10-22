@@ -24,6 +24,7 @@ services:
       - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
       - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
       - EMAIL_FROM=${EMAIL_FROM}
+      - REDIS_URL=${REDIS_URL}
     depends_on:
       - redis
     # networks:
