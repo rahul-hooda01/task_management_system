@@ -77,6 +77,37 @@ docker-compose up --build
 - **Delete Task**: `DELETE /api/v1/tasks/deleteTask/:id` (admin secured)
 - **Get Task Count by Status**: `GET /api/v1/tasks/getTaskCountByStatus` (secured)
 
+### User Authentication APIs
+
+- **Register User**: `POST /api/v1/users/register`
+- **Login User**: `POST /api/v1/users/login`
+- **Logout User**: `POST /api/v1/users/logout` (secured)
+- **Refresh Token**: `POST /api/v1/users/refresh-token`
+- **Get Current User**: `GET /api/v1/users/getCurrentUser` (secured)
+- **Update User by ID**: `PATCH /api/v1/users/updateUserById/:id` (secured, admin or manager)
+- **Get User by ID**: `GET /api/v1/users/getUserById/:id` (secured, admin or manager)
+- **Get All Users**: `GET /api/v1/users/getAllUsers` (secured, admin)
+
+### Task Management APIs
+
+- **Create a New Task**: `POST /api/v1/tasks/addTasks` (secured)
+- **Get All Tasks**: `GET /api/v1/tasks/getAllTasks` (secured, admin)
+- **Get My Tasks**: `GET /api/v1/tasks/getMyTasks` (secured)
+- **Get All Assigned Tasks by User ID**: `GET /api/v1/tasks/getAllAssignTasksByUserId/:id` (secured, admin or manager)
+- **Get Task by ID**: `GET /api/v1/tasks/getTaskById/:id` (secured)
+- **Assign a Task by ID**: `GET /api/v1/tasks/assign/TasksById/:id` (secured, admin, manager, or user)
+- **Update a Task by ID**: `PATCH /api/v1/tasks/updateTask/:id` (secured, admin or manager)
+- **Delete a Task by ID**: `DELETE /api/v1/tasks/deleteTask/:id` (secured, admin)
+- **Get Task Count by Status**: `GET /api/v1/tasks/getTaskCountByStatus` (secured)
+
+### Notification Settings APIs
+
+- **Change Notification Type**: `PATCH /api/v1/tasks/changeNotificationType` (secured)
+
+### Additional APIs
+
+- **Reset Password**: `POST /api/v1/users/resetPassword` (secured)
+
 ## Caching with Redis
 
 Redis is used to cache frequently accessed data, improving response times and reducing the load on the MongoDB database.
