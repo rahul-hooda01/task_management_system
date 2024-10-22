@@ -2,6 +2,8 @@
 
 The **Task Management System** is a web application designed to help users manage tasks efficiently. It provides features for task creation, assignment, updates, and retrieval, with secure user authentication and role-based access control.
 
+## API Documentation: https://documenter.getpostman.com/view/34862623/2sAXxY59AR
+
 ## Technologies Used
 
 - **Node.js**: JavaScript runtime for building the server.
